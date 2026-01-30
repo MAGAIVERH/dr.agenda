@@ -1,6 +1,8 @@
+import AuthenticationPage from './authentication/page';
+
 const Home = () => {
   return;
-  <h1 className="justify-center bg-white text-center text-red-500">Welcome World!!</h1>;
+  <AuthenticationPage />;
 };
 
 export default Home;
