@@ -63,7 +63,7 @@ const ClinicForm = () => {
           />
 
           <DialogFooter>
-            <Button type="submit" disabled={form.formState.isSubmitting}>
+            <Button type="submit" variant="default" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
               Criar clínica
             </Button>
