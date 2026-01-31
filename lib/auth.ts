@@ -17,16 +17,16 @@ export const auth = betterAuth({
     },
   },
   user: {
-    modelName: 'usersTables',
+    modelName: 'usersTable',
   },
   session: {
-    modelName: 'sessionsTables',
+    modelName: 'sessionsTable',
   },
   account: {
-    modelName: 'accountsTables',
+    modelName: 'accountsTable',
   },
   verification: {
-    modelName: 'verificationsTables',
+    modelName: 'verificationsTable',
   },
   emailAndPassword: {
     enabled: true,
