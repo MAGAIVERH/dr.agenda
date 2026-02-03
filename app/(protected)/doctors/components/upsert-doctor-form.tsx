@@ -32,8 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { doctorsTable } from '@/db/schema';
-
+import { doctorsTables } from '@/db/schema';
 import { medicalSpecialties } from '../_constants';
 
 const formSchema = z
@@ -67,7 +66,7 @@ const formSchema = z
   );
 
 interface UpsertDoctorFormProps {
-  doctor?: typeof doctorsTable.$inferSelect;
+  doctor?: typeof doctorsTables.$inferSelect;
   onSuccess?: () => void;
 }
 

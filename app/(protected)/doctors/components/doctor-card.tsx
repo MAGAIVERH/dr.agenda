@@ -23,14 +23,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { doctorsTable } from '@/db/schema';
+import { doctorsTables } from '@/db/schema';
 import { formatCurrencyInCents } from '@/helpers/currency';
 
 import { getAvailability } from '../_helpers/availability';
 import UpsertDoctorForm from './upsert-doctor-form';
 
 interface DoctorCardProps {
-  doctor: typeof doctorsTable.$inferSelect;
+  doctor: typeof doctorsTables.$inferSelect;
 }
 
 const DoctorCard = ({ doctor }: DoctorCardProps) => {
