@@ -5,7 +5,6 @@ import { useAction } from 'next-safe-action/hooks';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { deleteDoctor } from '@/actions/delete-doctor';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,8 +23,9 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { doctorsTables } from '@/db/schema';
-import { formatCurrencyInCents } from '@/helpers/currency';
 
+import { deleteDoctor } from '@/actions/delete-doctor';
+import { formatCurrencyInCents } from '@/helpers/currency';
 import { getAvailability } from '../_helpers/availability';
 import UpsertDoctorForm from './upsert-doctor-form';
 
