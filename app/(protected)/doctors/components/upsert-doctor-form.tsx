@@ -1,3 +1,5 @@
+'use client';
+
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAction } from 'next-safe-action/hooks';
 import { useForm } from 'react-hook-form';
@@ -43,6 +45,8 @@ const formSchema = z
     specialty: z.string().trim().min(1, {
       message: 'Especialidade é obrigatória.',
     }),
+    avatarImageUrl: z.string().url().nullable().optional(),
+
     appointmentPrice: z.number().min(1, {
       message: 'Preço da consulta é obrigatório.',
     }),
@@ -77,6 +81,7 @@ const UpsertDoctorForm = ({ doctor, onSuccess }: UpsertDoctorFormProps) => {
     defaultValues: {
       name: doctor?.name ?? '',
       specialty: doctor?.specialty ?? '',
+      avatarImageUrl: doctor?.avatarImageUrl ?? null,
       appointmentPrice: doctor?.appointmentPriceInCents ? doctor.appointmentPriceInCents / 100 : 0,
       availableFromWeekDay: doctor?.availableFromWeekDay?.toString() ?? '1',
       availableToWeekDay: doctor?.availableToWeekDay?.toString() ?? '5',
@@ -151,6 +156,35 @@ const UpsertDoctorForm = ({ doctor, onSuccess }: UpsertDoctorFormProps) => {
               </FormItem>
             )}
           />
+
+          <FormField
+            control={form.control}
+            name="avatarImageUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Foto (URL do Cloudinary) (opcional)</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Cole a URL https://res.cloudinary.com/..."
+                    value={field.value ?? ''}
+                    onChange={(e) => {
+                      const value = e.target.value.trim();
+                      field.onChange(value === '' ? null : value);
+                    }}
+                  />
+                </FormControl>
+
+                {field.value ? (
+                  <Button type="button" variant="outline" onClick={() => field.onChange(null)}>
+                    Remover foto
+                  </Button>
+                ) : null}
+
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <FormField
             control={form.control}
             name="appointmentPrice"

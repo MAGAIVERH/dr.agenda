@@ -16,7 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
@@ -33,6 +33,11 @@ interface DoctorCardProps {
   doctor: typeof doctorsTables.$inferSelect;
 }
 
+const getFirstLetterAfterTitle = (rawName: string) => {
+  const cleaned = rawName.trim().replace(/^(dr\.?|dra\.?)\s+/i, '');
+  return (cleaned.charAt(0) || '?').toUpperCase();
+};
+
 const DoctorCard = ({ doctor }: DoctorCardProps) => {
   const [isUpsertDoctorDialogOpen, setIsUpsertDoctorDialogOpen] = useState(false);
   const deleteDoctorAction = useAction(deleteDoctor, {
@@ -48,10 +53,6 @@ const DoctorCard = ({ doctor }: DoctorCardProps) => {
     deleteDoctorAction.execute({ id: doctor.id });
   };
 
-  const doctorInitials = doctor.name
-    .split(' ')
-    .map((name) => name[0])
-    .join('');
   const availability = getAvailability(doctor);
 
   return (
@@ -59,8 +60,10 @@ const DoctorCard = ({ doctor }: DoctorCardProps) => {
       <CardHeader>
         <div className="flex items-center gap-2">
           <Avatar className="h-10 w-10">
-            <AvatarFallback>{doctorInitials}</AvatarFallback>
+            <AvatarImage src={doctor.avatarImageUrl ?? undefined} alt={doctor.name} />
+            <AvatarFallback>{getFirstLetterAfterTitle(doctor.name)}</AvatarFallback>
           </Avatar>
+
           <div>
             <h3 className="text-sm font-medium">{doctor.name}</h3>
             <p className="text-muted-foreground text-sm">{doctor.specialty}</p>

@@ -46,6 +46,7 @@ export const upsertDoctor = actionClient
         ...parsedInput,
         id: parsedInput.id,
         clinicId: session?.user.clinic?.id,
+        avatarImageUrl: parsedInput.avatarImageUrl ?? null,
         availableFromTime: availableFromTimeUTC.format('HH:mm:ss'),
         availableToTime: availableToTimeUTC.format('HH:mm:ss'),
       })
@@ -53,6 +54,7 @@ export const upsertDoctor = actionClient
         target: [doctorsTables.id],
         set: {
           ...parsedInput,
+          avatarImageUrl: parsedInput.avatarImageUrl ?? null,
           availableFromTime: availableFromTimeUTC.format('HH:mm:ss'),
           availableToTime: availableToTimeUTC.format('HH:mm:ss'),
         },
