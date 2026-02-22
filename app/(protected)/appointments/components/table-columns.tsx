@@ -36,18 +36,27 @@ const getAppointmentStatus = (date: Date) => {
   const startOfTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
   const startOfDayAfterTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2);
 
+  // ✅ Se o dia da consulta já passou (ontem pra trás): Finalizada
   if (date < startOfToday) {
-    return { label: 'Atrasado', variant: 'destructive' as const };
+    return { label: 'Finalizada', variant: 'outline' as const };
   }
 
+  // ✅ Se é hoje: depende do horário
   if (date >= startOfToday && date < startOfTomorrow) {
+    // Se o horário já passou e ainda é hoje: Atrasada
+    if (date < now) {
+      return { label: 'Atrasada', variant: 'destructive' as const };
+    }
+
     return { label: 'Hoje', variant: 'default' as const };
   }
 
+  // Amanhã
   if (date >= startOfTomorrow && date < startOfDayAfterTomorrow) {
     return { label: 'Amanhã', variant: 'secondary' as const };
   }
 
+  // Esta semana (até 7 dias)
   const sevenDaysFromNow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7);
   if (date < sevenDaysFromNow) {
     return { label: 'Esta semana', variant: 'outline' as const };
