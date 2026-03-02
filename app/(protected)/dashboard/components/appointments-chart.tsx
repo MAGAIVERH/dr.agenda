@@ -28,7 +28,6 @@ interface AppointmentsChartProps {
 }
 
 const AppointmentsChart = ({ dailyAppointmentsData }: AppointmentsChartProps) => {
-  // Gerar 21 dias: 10 antes + hoje + 10 depois
   const chartDays = Array.from({ length: 21 }).map((_, i) =>
     dayjs()
       .subtract(10 - i, 'days')
@@ -57,14 +56,25 @@ const AppointmentsChart = ({ dailyAppointmentsData }: AppointmentsChartProps) =>
   } satisfies ChartConfig;
 
   return (
-    <Card>
+    <Card className="flex h-full flex-col">
       <CardHeader className="flex flex-row items-center gap-2">
         <DollarSign />
         <CardTitle>Agendamentos e Faturamento</CardTitle>
       </CardHeader>
-      <CardContent>
-        <ChartContainer config={chartConfig} className="min-h-50">
-          <AreaChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+
+      {/* ✅ ocupa o resto do card e remove “folga” extra */}
+      <CardContent className="min-h-0 flex-1 pt-0">
+        <ChartContainer
+          config={chartConfig}
+          className={[
+            'h-full min-h-0 w-full',
+            'aspect-auto',
+            // ✅ força o ResponsiveContainer do recharts a preencher a altura
+            '[&_.recharts-responsive-container]:h-full',
+            '[&_.recharts-responsive-container]:w-full',
+          ].join(' ')}
+        >
+          <AreaChart data={chartData} margin={{ top: 16, right: 26, left: 0, bottom: 10 }}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" tickLine={false} tickMargin={10} axisLine={false} />
             <YAxis yAxisId="left" tickLine={false} axisLine={false} tickMargin={8} />
