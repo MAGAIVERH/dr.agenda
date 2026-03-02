@@ -1,6 +1,6 @@
 'use client';
 
-import { CalendarDays, LayoutDashboard, LogOut, Stethoscope, UsersRound } from 'lucide-react';
+import { CalendarDays, Gem, LayoutDashboard, LogOut, Stethoscope, UsersRound } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -74,6 +74,22 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Outros</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === '/new-subscription'}>
+                  <Link href="/new-subscription">
+                    <Gem className="text-primary" />
+                    <span className="text-primary">Assinatura</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
