@@ -40,10 +40,17 @@ export const getAvailableTimes = actionClient
     if (!doctor) {
       throw new Error('Médico não encontrado');
     }
-    const selectedDayOfWeek = dayjs(parsedInput.date).day();
+    const selectedDayOfWeek = dayjs(parsedInput.date).day(); // 0=Dom ... 6=Sáb
+
+    const from = doctor.availableFromWeekDay;
+    const to = doctor.availableToWeekDay;
+
+    // ✅ Suporta faixa normal e faixa que "vira" a semana (ex: Seg(1) -> Dom(0))
     const doctorIsAvailable =
-      selectedDayOfWeek >= doctor.availableFromWeekDay &&
-      selectedDayOfWeek <= doctor.availableToWeekDay;
+      from <= to
+        ? selectedDayOfWeek >= from && selectedDayOfWeek <= to
+        : selectedDayOfWeek >= from || selectedDayOfWeek <= to;
+
     if (!doctorIsAvailable) {
       return [];
     }
