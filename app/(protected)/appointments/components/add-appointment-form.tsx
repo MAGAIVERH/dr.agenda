@@ -503,10 +503,10 @@ const AddAppointmentForm = ({
     if (!selectedDoctor) return false;
 
     const dayOfWeek = date.getDay();
-    return (
-      dayOfWeek >= selectedDoctor.availableFromWeekDay &&
-      dayOfWeek <= selectedDoctor.availableToWeekDay
-    );
+    const from = selectedDoctor.availableFromWeekDay;
+    const to = selectedDoctor.availableToWeekDay;
+
+    return from <= to ? dayOfWeek >= from && dayOfWeek <= to : dayOfWeek >= from || dayOfWeek <= to;
   };
 
   const isDateTimeEnabled = selectedPatientId && selectedDoctorId;
@@ -628,6 +628,7 @@ const AddAppointmentForm = ({
                   <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
                       mode="single"
+                      locale={ptBR}
                       selected={field.value}
                       onSelect={field.onChange}
                       disabled={(date) => date < new Date() || !isDateAvailable(date)}
