@@ -38,6 +38,16 @@ const getFirstLetterAfterTitle = (rawName: string) => {
   return (cleaned.charAt(0) || '?').toUpperCase();
 };
 
+const weekDayLabels = [
+  'domingo',
+  'segunda-feira',
+  'terça-feira',
+  'quarta-feira',
+  'quinta-feira',
+  'sexta-feira',
+  'sábado',
+];
+
 const DoctorCard = ({ doctor }: DoctorCardProps) => {
   const [isUpsertDoctorDialogOpen, setIsUpsertDoctorDialogOpen] = useState(false);
   const deleteDoctorAction = useAction(deleteDoctor, {
@@ -74,7 +84,7 @@ const DoctorCard = ({ doctor }: DoctorCardProps) => {
       <CardContent className="flex flex-col gap-2">
         <Badge variant="outline">
           <CalendarIcon className="mr-1" />
-          {availability.from.format('dddd')} a {availability.to.format('dddd')}
+          {weekDayLabels[doctor.availableFromWeekDay]} a {weekDayLabels[doctor.availableToWeekDay]}
         </Badge>
         <Badge variant="outline">
           <ClockIcon className="mr-1" />
