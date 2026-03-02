@@ -48,15 +48,17 @@ export default function TopSpecialties({ topSpecialties }: TopSpecialtiesProps) 
                 <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-full">
                   <Icon className="text-primary h-5 w-5" />
                 </div>
-                <div className="flex w-full flex-col justify-center">
-                  <div className="flex w-full justify-between">
-                    <h3 className="text-sm">{specialty.specialty}</h3>
-                    <div className="text-right">
-                      <span className="text-muted-foreground text-sm font-medium">
-                        {specialty.appointments} agend.
-                      </span>
-                    </div>
+                <div className="flex w-full min-w-0 flex-col gap-2">
+                  <div className="flex min-w-0 items-center justify-between gap-3">
+                    <h3 className="min-w-0 flex-1 truncate text-sm" title={specialty.specialty}>
+                      {specialty.specialty}
+                    </h3>
+
+                    <span className="text-muted-foreground w-23 shrink-0 text-right text-sm font-medium whitespace-nowrap tabular-nums">
+                      {specialty.appointments} agend.
+                    </span>
                   </div>
+
                   <Progress value={progressValue} className="w-full" />
                 </div>
               </div>
