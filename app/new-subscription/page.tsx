@@ -9,7 +9,7 @@ export default async function Home() {
     headers: await headers(),
   });
   if (!session) {
-    redirect('/login');
+    redirect('/authentication');
   }
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-linear-to-b from-gray-50 to-gray-100 p-6">
