@@ -83,8 +83,8 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/new-subscription'}>
-                  <Link href="/new-subscription">
+                <SidebarMenuButton asChild isActive={pathname === '/subscription'}>
+                  <Link href="/subscription">
                     <Gem className="text-primary" />
                     <span className="text-primary">Assinatura</span>
                   </Link>
