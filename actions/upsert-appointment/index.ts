@@ -44,12 +44,32 @@ export const upsertAppointment = actionClient
       throw new Error('Time not available');
     }
 
+    const [hoursRaw, minutesRaw] = parsedInput.time.split(':');
+    const hours = Number(hoursRaw);
+    const minutes = Number(minutesRaw);
+
+    const isValidTime =
+      Number.isFinite(hours) &&
+      Number.isFinite(minutes) &&
+      hours >= 0 &&
+      hours <= 23 &&
+      minutes >= 0 &&
+      minutes <= 59;
+
+    if (!isValidTime) {
+      throw new Error('Invalid time');
+    }
+
     const appointmentDateTime = dayjs(parsedInput.date)
-      .set('hour', Number(parsedInput.time.split(':')[0]))
-      .set('minute', Number(parsedInput.time.split(':')[1]))
+      .set('hour', hours)
+      .set('minute', minutes)
       .set('second', 0)
       .set('millisecond', 0)
       .toDate();
+
+    if (appointmentDateTime.getTime() <= Date.now()) {
+      throw new Error('Cannot schedule in the past');
+    }
 
     await db
       .insert(appointmentsTables)
