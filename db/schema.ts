@@ -168,6 +168,9 @@ export const appointmentsTables = pgTable('appointments', {
     .notNull()
     .references(() => patientsTables.id, { onDelete: 'cascade' }),
   date: timestamp('appointment_date').notNull(),
+
+  status: text('status').notNull().default('scheduled'),
+
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
     .defaultNow()
