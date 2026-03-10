@@ -170,6 +170,7 @@ export const appointmentsTables = pgTable('appointments', {
   date: timestamp('appointment_date').notNull(),
 
   status: text('status').notNull().default('scheduled'),
+  statusChangedAt: timestamp('status_changed_at').defaultNow().notNull(),
 
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
