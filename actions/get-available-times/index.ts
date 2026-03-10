@@ -28,20 +28,24 @@ export const getAvailableTimes = actionClient
     const session = await auth.api.getSession({
       headers: await headers(),
     });
+
     if (!session) {
       throw new Error('Unauthorized');
     }
+
     if (!session.user.clinic) {
       throw new Error('Clínica não encontrada');
     }
+
     const doctor = await db.query.doctorsTables.findFirst({
       where: eq(doctorsTables.id, parsedInput.doctorId),
     });
+
     if (!doctor) {
       throw new Error('Médico não encontrado');
     }
-    const selectedDayOfWeek = dayjs(parsedInput.date).day(); // 0=Dom ... 6=Sáb
 
+    const selectedDayOfWeek = dayjs(parsedInput.date).day(); // 0=Dom ... 6=Sáb
     const from = doctor.availableFromWeekDay;
     const to = doctor.availableToWeekDay;
 
@@ -54,14 +58,22 @@ export const getAvailableTimes = actionClient
     if (!doctorIsAvailable) {
       return [];
     }
+
     const appointments = await db.query.appointmentsTables.findMany({
       where: eq(appointmentsTables.doctorId, parsedInput.doctorId),
     });
-    const appointmentsOnSelectedDate = appointments
+
+    // ✅ FIX: cancelado/ausente NÃO bloqueiam horário
+    const blockingAppointmentsOnSelectedDate = appointments
       .filter((appointment) => {
-        return dayjs(appointment.date).isSame(parsedInput.date, 'day');
+        const isSameDay = dayjs(appointment.date).isSame(parsedInput.date, 'day');
+        const status = appointment.status as string | undefined;
+
+        const blocksSlot = status === 'scheduled' || status === 'completed';
+        return isSameDay && blocksSlot;
       })
       .map((appointment) => dayjs(appointment.date).format('HH:mm:ss'));
+
     const timeSlots = generateTimeSlots();
 
     const doctorAvailableFrom = dayjs()
@@ -70,12 +82,14 @@ export const getAvailableTimes = actionClient
       .set('minute', Number(doctor.availableFromTime.split(':')[1]))
       .set('second', 0)
       .local();
+
     const doctorAvailableTo = dayjs()
       .utc()
       .set('hour', Number(doctor.availableToTime.split(':')[0]))
       .set('minute', Number(doctor.availableToTime.split(':')[1]))
       .set('second', 0)
       .local();
+
     const doctorTimeSlots = timeSlots.filter((time) => {
       const date = dayjs()
         .utc()
@@ -88,10 +102,11 @@ export const getAvailableTimes = actionClient
         date.format('HH:mm:ss') <= doctorAvailableTo.format('HH:mm:ss')
       );
     });
+
     return doctorTimeSlots.map((time) => {
       return {
         value: time,
-        available: !appointmentsOnSelectedDate.includes(time),
+        available: !blockingAppointmentsOnSelectedDate.includes(time),
         label: time.substring(0, 5),
       };
     });
