@@ -1,8 +1,9 @@
 import dayjs from 'dayjs';
-import { and, count, desc, eq, gte, lte, sql, sum } from 'drizzle-orm';
+import { and, count, desc, eq, gte, lte, or, sql, sum } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { appointmentsTables, doctorsTables, patientsTables } from '@/db/schema';
+import { unstable_noStore as noStore } from 'next/cache';
 
 interface Params {
   from: string;
@@ -17,6 +18,7 @@ interface Params {
 }
 
 export const getDashboard = async ({ from, to, session }: Params) => {
+  noStore();
   const clinicId = session.user.clinic.id;
 
   const rangeStartDate = dayjs(from).startOf('day').toDate();
@@ -29,7 +31,8 @@ export const getDashboard = async ({ from, to, session }: Params) => {
   const chartEndDate = dayjs().add(10, 'days').endOf('day').toDate();
 
   const [
-    [totalRevenue],
+    [totalRevenueProjected],
+    [totalRevenueReal],
     [totalAppointments],
     [totalPatients],
     [totalDoctors],
@@ -48,6 +51,24 @@ export const getDashboard = async ({ from, to, session }: Params) => {
           eq(appointmentsTables.clinicId, clinicId),
           gte(appointmentsTables.date, rangeStartDate),
           lte(appointmentsTables.date, rangeEndDate),
+          or(
+            eq(appointmentsTables.status, 'scheduled'),
+            eq(appointmentsTables.status, 'completed'),
+          ),
+        ),
+      ),
+
+    db
+      .select({
+        total: sum(appointmentsTables.appointmentPriceInCents),
+      })
+      .from(appointmentsTables)
+      .where(
+        and(
+          eq(appointmentsTables.clinicId, clinicId),
+          gte(appointmentsTables.date, rangeStartDate),
+          lte(appointmentsTables.date, rangeEndDate),
+          eq(appointmentsTables.status, 'completed'),
         ),
       ),
 
@@ -117,12 +138,28 @@ export const getDashboard = async ({ from, to, session }: Params) => {
       .groupBy(doctorsTables.specialty)
       .orderBy(desc(count(appointmentsTables.id))),
 
-    // ✅ FIX AQUI: hoje = startOfDay..endOfDay
     db.query.appointmentsTables.findMany({
       where: and(
         eq(appointmentsTables.clinicId, clinicId),
         gte(appointmentsTables.date, todayStart),
         lte(appointmentsTables.date, todayEnd),
+
+        // ✅ Regra: cancelado/ausente só aparece se foi marcado hoje
+        or(
+          // Sempre mostrar os de hoje que estão ativos ou concluídos
+          eq(appointmentsTables.status, 'scheduled'),
+          eq(appointmentsTables.status, 'completed'),
+
+          // Mostrar cancelado/ausente SOMENTE se o status mudou hoje
+          and(
+            or(
+              eq(appointmentsTables.status, 'cancelled'),
+              eq(appointmentsTables.status, 'no_show'),
+            ),
+            gte(appointmentsTables.statusChangedAt, todayStart),
+            lte(appointmentsTables.statusChangedAt, todayEnd),
+          ),
+        ),
       ),
       with: {
         patient: true,
@@ -135,9 +172,30 @@ export const getDashboard = async ({ from, to, session }: Params) => {
       .select({
         date: sql<string>`DATE(${appointmentsTables.date})`.as('date'),
         appointments: count(appointmentsTables.id),
-        revenue: sql<number>`COALESCE(SUM(${appointmentsTables.appointmentPriceInCents}), 0)`.as(
-          'revenue',
-        ),
+        revenueProjected: sql<number>`
+        COALESCE(
+          SUM(
+            CASE
+              WHEN ${appointmentsTables.status} IN ('scheduled', 'completed')
+              THEN ${appointmentsTables.appointmentPriceInCents}
+              ELSE 0
+            END
+          ),
+          0
+        )
+      `.as('revenueProjected'),
+        revenueReal: sql<number>`
+        COALESCE(
+          SUM(
+            CASE
+              WHEN ${appointmentsTables.status} = 'completed'
+              THEN ${appointmentsTables.appointmentPriceInCents}
+              ELSE 0
+            END
+          ),
+          0
+        )
+      `.as('revenueReal'),
       })
       .from(appointmentsTables)
       .where(
@@ -150,9 +208,9 @@ export const getDashboard = async ({ from, to, session }: Params) => {
       .groupBy(sql`DATE(${appointmentsTables.date})`)
       .orderBy(sql`DATE(${appointmentsTables.date})`),
   ]);
-
   return {
-    totalRevenue,
+    totalRevenueProjected,
+    totalRevenueReal,
     totalAppointments,
     totalPatients,
     totalDoctors,
