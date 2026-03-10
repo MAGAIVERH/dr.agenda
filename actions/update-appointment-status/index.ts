@@ -47,6 +47,7 @@ export const updateAppointmentStatus = actionClient
       .update(appointmentsTables)
       .set({
         status: parsedInput.status,
+        statusChangedAt: new Date(),
         updatedAt: new Date(),
       })
       .where(eq(appointmentsTables.id, parsedInput.id));
@@ -54,7 +55,6 @@ export const updateAppointmentStatus = actionClient
     revalidatePath('/appointments');
     revalidatePath('/dashboard');
 
-    // ✅ IMPORTANTE: retornar algo para o hook disparar onSuccess de forma confiável
     return {
       id: parsedInput.id,
       status: parsedInput.status,
