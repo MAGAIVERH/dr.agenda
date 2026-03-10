@@ -20,7 +20,8 @@ import { formatCurrencyInCents } from '@/helpers/currency';
 interface DailyAppointment {
   date: string;
   appointments: number;
-  revenue: number | null;
+  revenueProjected: number;
+  revenueReal: number;
 }
 
 interface AppointmentsChartProps {
@@ -36,11 +37,13 @@ const AppointmentsChart = ({ dailyAppointmentsData }: AppointmentsChartProps) =>
 
   const chartData = chartDays.map((date) => {
     const dataForDay = dailyAppointmentsData.find((item) => item.date === date);
+
     return {
       date: dayjs(date).format('DD/MM'),
       fullDate: date,
       appointments: dataForDay?.appointments || 0,
-      revenue: Number(dataForDay?.revenue || 0),
+      revenueProjected: Number(dataForDay?.revenueProjected || 0),
+      revenueReal: Number(dataForDay?.revenueReal || 0),
     };
   });
 
@@ -49,9 +52,13 @@ const AppointmentsChart = ({ dailyAppointmentsData }: AppointmentsChartProps) =>
       label: 'Agendamentos',
       color: '#0B68F7',
     },
-    revenue: {
-      label: 'Faturamento',
+    revenueProjected: {
+      label: 'Faturamento projetado',
       color: '#10B981',
+    },
+    revenueReal: {
+      label: 'Faturamento real',
+      color: '#6366F1',
     },
   } satisfies ChartConfig;
 
@@ -90,17 +97,30 @@ const AppointmentsChart = ({ dailyAppointmentsData }: AppointmentsChartProps) =>
               content={
                 <ChartTooltipContent
                   formatter={(value, name) => {
-                    if (name === 'revenue') {
+                    if (name === 'revenueProjected') {
                       return (
                         <>
                           <div className="h-3 w-3 rounded bg-[#10B981]" />
-                          <span className="text-muted-foreground">Faturamento:</span>
+                          <span className="text-muted-foreground">Faturamento projetado:</span>
                           <span className="font-semibold">
                             {formatCurrencyInCents(Number(value))}
                           </span>
                         </>
                       );
                     }
+
+                    if (name === 'revenueReal') {
+                      return (
+                        <>
+                          <div className="h-3 w-3 rounded bg-[#6366F1]" />
+                          <span className="text-muted-foreground">Faturamento real:</span>
+                          <span className="font-semibold">
+                            {formatCurrencyInCents(Number(value))}
+                          </span>
+                        </>
+                      );
+                    }
+
                     return (
                       <>
                         <div className="h-3 w-3 rounded bg-[#0B68F7]" />
@@ -130,10 +150,20 @@ const AppointmentsChart = ({ dailyAppointmentsData }: AppointmentsChartProps) =>
             <Area
               yAxisId="right"
               type="monotone"
-              dataKey="revenue"
-              stroke="var(--color-revenue)"
-              fill="var(--color-revenue)"
+              dataKey="revenueProjected"
+              stroke="var(--color-revenueProjected)"
+              fill="var(--color-revenueProjected)"
               fillOpacity={0.2}
+              strokeWidth={2}
+            />
+
+            <Area
+              yAxisId="right"
+              type="monotone"
+              dataKey="revenueReal"
+              stroke="var(--color-revenueReal)"
+              fill="var(--color-revenueReal)"
+              fillOpacity={0.15}
               strokeWidth={2}
             />
           </AreaChart>

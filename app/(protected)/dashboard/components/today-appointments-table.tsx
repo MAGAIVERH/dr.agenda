@@ -3,6 +3,7 @@
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+import { Badge } from '@/components/ui/badge';
 import {
   Table,
   TableBody,
@@ -28,13 +29,42 @@ interface TodayAppointmentsTableProps {
   appointments: TodayAppointment[];
 }
 
-const StatusPill = ({ label }: { label: string }) => {
-  return (
-    <span className="bg-primary/10 text-primary inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium">
-      <span className="bg-primary h-2 w-2 rounded-full" />
-      {label}
-    </span>
-  );
+type AppointmentStatus = 'scheduled' | 'completed' | 'cancelled' | 'no_show';
+
+const BADGE_BASE = 'h-6 min-w-[108px] justify-center rounded-md px-2 text-xs font-medium leading-6';
+
+const getTodayAppointmentBadge = (status: string) => {
+  const appointmentStatus = (status as AppointmentStatus) ?? 'scheduled';
+
+  if (appointmentStatus === 'completed') {
+    return {
+      label: 'Concluído',
+      variant: 'default' as const,
+      className: BADGE_BASE,
+    };
+  }
+
+  if (appointmentStatus === 'cancelled') {
+    return {
+      label: 'Cancelado',
+      variant: 'destructive' as const,
+      className: BADGE_BASE,
+    };
+  }
+
+  if (appointmentStatus === 'no_show') {
+    return {
+      label: 'Ausente',
+      variant: 'secondary' as const,
+      className: `${BADGE_BASE} bg-zinc-100 text-zinc-700`,
+    };
+  }
+
+  return {
+    label: 'Confirmado',
+    variant: 'secondary' as const,
+    className: `${BADGE_BASE} bg-blue-100 text-blue-700`,
+  };
 };
 
 const TodayAppointmentsTable = ({ appointments }: TodayAppointmentsTableProps) => {
@@ -62,6 +92,7 @@ const TodayAppointmentsTable = ({ appointments }: TodayAppointmentsTableProps) =
           {appointments.length ? (
             appointments.map((appointment) => {
               const appointmentDate = new Date(appointment.date);
+              const badge = getTodayAppointmentBadge(appointment.status);
 
               return (
                 <TableRow key={appointment.id} className="hover:bg-muted/30">
@@ -74,7 +105,9 @@ const TodayAppointmentsTable = ({ appointments }: TodayAppointmentsTableProps) =
                   <TableCell className="py-4">{appointment.doctor?.name}</TableCell>
 
                   <TableCell className="py-4">
-                    <StatusPill label="Confirmado" />
+                    <Badge variant={badge.variant} className={badge.className}>
+                      {badge.label}
+                    </Badge>
                   </TableCell>
                 </TableRow>
               );
