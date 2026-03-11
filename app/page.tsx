@@ -1,8 +1,7 @@
-import AuthenticationPage from './authentication/page';
+import { redirect } from 'next/navigation';
 
 const Home = () => {
-  return;
-  <AuthenticationPage />;
+  redirect('/dashboard');
 };
 
 export default Home;
