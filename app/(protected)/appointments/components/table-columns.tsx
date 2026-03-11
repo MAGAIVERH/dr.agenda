@@ -177,19 +177,22 @@ export const getAppointmentsTableColumns = ({
       const appointment = params.row.original;
       const appointmentDate = new Date(appointment.date);
 
-      const formatted = format(appointmentDate, "dd/MM/yyyy 'às' HH:mm", {
+      return format(appointmentDate, "dd/MM/yyyy 'às' HH:mm", {
         locale: ptBR,
       });
-
+    },
+  },
+  {
+    id: 'status',
+    header: 'Status',
+    cell: (params) => {
+      const appointment = params.row.original;
       const badge = getAppointmentBadge(appointment);
 
       return (
-        <div className="flex items-center gap-2">
-          <span>{formatted}</span>
-          <Badge variant={badge.variant} className={badge.className}>
-            {badge.label}
-          </Badge>
-        </div>
+        <Badge variant={badge.variant} className={badge.className}>
+          {badge.label}
+        </Badge>
       );
     },
   },
