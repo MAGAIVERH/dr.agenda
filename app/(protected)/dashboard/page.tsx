@@ -50,9 +50,7 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
   const { from, to } = await searchParams;
 
   if (!from || !to) {
-    redirect(
-      `/dashboard?from=${dayjs().format('YYYY-MM-DD')}&to=${dayjs().add(1, 'month').format('YYYY-MM-DD')}`,
-    );
+    redirect(`/dashboard?from=${dayjs().format('YYYY-MM-DD')}&to=${dayjs().format('YYYY-MM-DD')}`);
   }
 
   const {
@@ -92,7 +90,7 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
 
       <PageContent>
         <StatsCards
-          totalRevenue={totalRevenueProjected.total ? Number(totalRevenueProjected.total) : null}
+          totalRevenue={totalRevenueReal.total ? Number(totalRevenueReal.total) : null}
           totalAppointments={totalAppointments.total}
           totalPatients={totalPatients.total}
           totalDoctors={totalDoctors.total}
