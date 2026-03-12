@@ -1,6 +1,8 @@
 'use server';
 
 import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
 import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
 
@@ -11,6 +13,25 @@ import { actionClient } from '@/lib/next-safe.action';
 
 import { getAvailableTimes } from '../get-available-times';
 import { upsertAppointmentSchema } from './schema';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+const CLINIC_TIMEZONE = 'America/Fortaleza';
+
+const normalizeTime = (time: string) => {
+  const parts = time.split(':');
+
+  const hours = parts[0] ?? '00';
+  const minutes = parts[1] ?? '00';
+  const seconds = parts[2] ?? '00';
+
+  return {
+    hours: Number(hours),
+    minutes: Number(minutes),
+    seconds: Number(seconds),
+  };
+};
 
 export const upsertAppointment = actionClient
   .schema(upsertAppointmentSchema)
@@ -27,9 +48,11 @@ export const upsertAppointment = actionClient
       throw new Error('Clinic not found');
     }
 
+    const formattedDate = dayjs(parsedInput.date).format('YYYY-MM-DD');
+
     const availableTimes = await getAvailableTimes({
       doctorId: parsedInput.doctorId,
-      date: dayjs(parsedInput.date).format('YYYY-MM-DD'),
+      date: formattedDate,
     });
 
     if (!availableTimes?.data) {
@@ -44,32 +67,39 @@ export const upsertAppointment = actionClient
       throw new Error('Time not available');
     }
 
-    const [hoursRaw, minutesRaw] = parsedInput.time.split(':');
-    const hours = Number(hoursRaw);
-    const minutes = Number(minutesRaw);
+    const { hours, minutes, seconds } = normalizeTime(parsedInput.time);
 
     const isValidTime =
       Number.isFinite(hours) &&
       Number.isFinite(minutes) &&
+      Number.isFinite(seconds) &&
       hours >= 0 &&
       hours <= 23 &&
       minutes >= 0 &&
-      minutes <= 59;
+      minutes <= 59 &&
+      seconds >= 0 &&
+      seconds <= 59;
 
     if (!isValidTime) {
       throw new Error('Invalid time');
     }
 
-    const appointmentDateTime = dayjs(parsedInput.date)
+    // ✅ monta a data/hora no fuso da clínica
+    const appointmentDateInClinicTz = dayjs
+      .tz(formattedDate, CLINIC_TIMEZONE)
       .set('hour', hours)
       .set('minute', minutes)
-      .set('second', 0)
-      .set('millisecond', 0)
-      .toDate();
+      .set('second', seconds)
+      .set('millisecond', 0);
 
-    if (appointmentDateTime.getTime() <= Date.now()) {
+    const nowInClinicTz = dayjs().tz(CLINIC_TIMEZONE);
+
+    if (appointmentDateInClinicTz.valueOf() <= nowInClinicTz.valueOf()) {
       throw new Error('Cannot schedule in the past');
     }
+
+    // ✅ salva em UTC no banco
+    const appointmentDateTime = appointmentDateInClinicTz.utc().toDate();
 
     await db
       .insert(appointmentsTables)
