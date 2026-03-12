@@ -115,6 +115,8 @@
 'use server';
 
 import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
 import { eq } from 'drizzle-orm';
 import { headers } from 'next/headers';
 import { z } from 'zod';
@@ -125,12 +127,30 @@ import { generateTimeSlots } from '@/helpers/time';
 import { auth } from '@/lib/auth';
 import { actionClient } from '@/lib/next-safe.action';
 
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
 const normalizeTime = (time: string) => {
   if (time.length === 5) {
     return `${time}:00`;
   }
 
   return time;
+};
+
+const convertUtcTimeToLocal = (time: string) => {
+  return dayjs
+    .utc(`2000-01-01T${normalizeTime(time)}`)
+    .local()
+    .format('HH:mm:ss');
+};
+
+const isTimeWithinRange = (time: string, from: string, to: string) => {
+  if (from <= to) {
+    return time >= from && time <= to;
+  }
+
+  return time >= from || time <= to;
 };
 
 export const getAvailableTimes = actionClient
@@ -161,16 +181,16 @@ export const getAvailableTimes = actionClient
       throw new Error('Médico não encontrado');
     }
 
-    const selectedDayOfWeek = dayjs(parsedInput.date).day(); // 0=Dom ... 6=Sáb
-    const from = doctor.availableFromWeekDay;
-    const to = doctor.availableToWeekDay;
+    const selectedDayOfWeek = dayjs(parsedInput.date).day();
+    const fromWeekDay = doctor.availableFromWeekDay;
+    const toWeekDay = doctor.availableToWeekDay;
 
-    const doctorIsAvailable =
-      from <= to
-        ? selectedDayOfWeek >= from && selectedDayOfWeek <= to
-        : selectedDayOfWeek >= from || selectedDayOfWeek <= to;
+    const doctorIsAvailableOnDate =
+      fromWeekDay <= toWeekDay
+        ? selectedDayOfWeek >= fromWeekDay && selectedDayOfWeek <= toWeekDay
+        : selectedDayOfWeek >= fromWeekDay || selectedDayOfWeek <= toWeekDay;
 
-    if (!doctorIsAvailable) {
+    if (!doctorIsAvailableOnDate) {
       return [];
     }
 
@@ -182,27 +202,29 @@ export const getAvailableTimes = actionClient
       .filter((appointment) => {
         const isSameDay = dayjs(appointment.date).isSame(parsedInput.date, 'day');
         const status = appointment.status as string | undefined;
-
         const blocksSlot = status === 'scheduled' || status === 'completed';
 
         return isSameDay && blocksSlot;
       })
       .map((appointment) => dayjs(appointment.date).format('HH:mm:ss'));
 
-    const timeSlots = generateTimeSlots();
-
-    const doctorAvailableFrom = normalizeTime(doctor.availableFromTime);
-    const doctorAvailableTo = normalizeTime(doctor.availableToTime);
+    const doctorAvailableFromLocal = convertUtcTimeToLocal(doctor.availableFromTime);
+    const doctorAvailableToLocal = convertUtcTimeToLocal(doctor.availableToTime);
 
     const now = dayjs();
     const isToday = dayjs(parsedInput.date).isSame(now, 'day');
     const currentTime = now.format('HH:mm:ss');
 
+    const timeSlots = generateTimeSlots();
+
     const availableSlots = timeSlots.filter((time) => {
-      const isInsideDoctorSchedule = time >= doctorAvailableFrom && time <= doctorAvailableTo;
+      const isInsideDoctorSchedule = isTimeWithinRange(
+        time,
+        doctorAvailableFromLocal,
+        doctorAvailableToLocal,
+      );
 
       const isBlocked = blockingAppointmentsOnSelectedDate.includes(time);
-
       const isPastTimeToday = isToday && time <= currentTime;
 
       return isInsideDoctorSchedule && !isBlocked && !isPastTimeToday;
