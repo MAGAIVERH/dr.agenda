@@ -208,6 +208,26 @@ const AddAppointmentForm = ({
 
   const isDateTimeEnabled = selectedPatientId && selectedDoctorId;
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (!selectedDoctorId || !selectedDate) {
+      form.setValue('time', '');
+      return;
+    }
+
+    if (
+      appointment?.id &&
+      selectedDoctorId === appointment.doctorId &&
+      selectedDate &&
+      isSameDay(selectedDate, new Date(appointment.date))
+    ) {
+      return;
+    }
+
+    form.setValue('time', '');
+  }, [selectedDoctorId, selectedDate, form, appointment, isOpen]);
+
   return (
     <DialogContent className="sm:max-w-125">
       <DialogHeader>
@@ -227,7 +247,7 @@ const AddAppointmentForm = ({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Paciente</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Selecione um paciente" />
@@ -252,7 +272,7 @@ const AddAppointmentForm = ({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Médico</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Selecione um médico" />
@@ -346,7 +366,7 @@ const AddAppointmentForm = ({
                 <FormLabel>Horário</FormLabel>
                 <Select
                   onValueChange={field.onChange}
-                  defaultValue={field.value}
+                  value={field.value}
                   disabled={!isDateTimeEnabled || !selectedDate}
                 >
                   <FormControl>
