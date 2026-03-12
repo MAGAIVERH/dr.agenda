@@ -1,9 +1,16 @@
 import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
 import { and, count, desc, eq, gte, lte, or, sql, sum } from 'drizzle-orm';
+import { unstable_noStore as noStore } from 'next/cache';
 
 import { db } from '@/db';
 import { appointmentsTables, doctorsTables, patientsTables } from '@/db/schema';
-import { unstable_noStore as noStore } from 'next/cache';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+const CLINIC_TIMEZONE = 'America/Fortaleza';
 
 interface Params {
   from: string;
@@ -17,18 +24,32 @@ interface Params {
   };
 }
 
+const getUtcRangeFromLocalDate = (date: string) => {
+  const start = dayjs.tz(date, CLINIC_TIMEZONE).startOf('day').utc().toDate();
+  const end = dayjs.tz(date, CLINIC_TIMEZONE).endOf('day').utc().toDate();
+
+  return { start, end };
+};
+
 export const getDashboard = async ({ from, to, session }: Params) => {
   noStore();
+
   const clinicId = session.user.clinic.id;
 
-  const rangeStartDate = dayjs(from).startOf('day').toDate();
-  const rangeEndDate = dayjs(to).endOf('day').toDate();
+  const { start: rangeStartDate } = getUtcRangeFromLocalDate(from);
+  const { end: rangeEndDate } = getUtcRangeFromLocalDate(to);
 
-  const todayStart = dayjs().startOf('day').toDate();
-  const todayEnd = dayjs().endOf('day').toDate();
+  const todayInClinicTz = dayjs().tz(CLINIC_TIMEZONE).format('YYYY-MM-DD');
+  const { start: todayStart, end: todayEnd } = getUtcRangeFromLocalDate(todayInClinicTz);
 
-  const chartStartDate = dayjs().subtract(10, 'days').startOf('day').toDate();
-  const chartEndDate = dayjs().add(10, 'days').endOf('day').toDate();
+  const chartStartDate = dayjs()
+    .tz(CLINIC_TIMEZONE)
+    .subtract(10, 'days')
+    .startOf('day')
+    .utc()
+    .toDate();
+
+  const chartEndDate = dayjs().tz(CLINIC_TIMEZONE).add(10, 'days').endOf('day').utc().toDate();
 
   const [
     [totalRevenueProjected],
@@ -143,14 +164,9 @@ export const getDashboard = async ({ from, to, session }: Params) => {
         eq(appointmentsTables.clinicId, clinicId),
         gte(appointmentsTables.date, todayStart),
         lte(appointmentsTables.date, todayEnd),
-
-        // ✅ Regra: cancelado/ausente só aparece se foi marcado hoje
         or(
-          // Sempre mostrar os de hoje que estão ativos ou concluídos
           eq(appointmentsTables.status, 'scheduled'),
           eq(appointmentsTables.status, 'completed'),
-
-          // Mostrar cancelado/ausente SOMENTE se o status mudou hoje
           and(
             or(
               eq(appointmentsTables.status, 'cancelled'),
@@ -173,29 +189,29 @@ export const getDashboard = async ({ from, to, session }: Params) => {
         date: sql<string>`DATE(${appointmentsTables.date})`.as('date'),
         appointments: count(appointmentsTables.id),
         revenueProjected: sql<number>`
-        COALESCE(
-          SUM(
-            CASE
-              WHEN ${appointmentsTables.status} IN ('scheduled', 'completed')
-              THEN ${appointmentsTables.appointmentPriceInCents}
-              ELSE 0
-            END
-          ),
-          0
-        )
-      `.as('revenueProjected'),
+          COALESCE(
+            SUM(
+              CASE
+                WHEN ${appointmentsTables.status} IN ('scheduled', 'completed')
+                THEN ${appointmentsTables.appointmentPriceInCents}
+                ELSE 0
+              END
+            ),
+            0
+          )
+        `.as('revenueProjected'),
         revenueReal: sql<number>`
-        COALESCE(
-          SUM(
-            CASE
-              WHEN ${appointmentsTables.status} = 'completed'
-              THEN ${appointmentsTables.appointmentPriceInCents}
-              ELSE 0
-            END
-          ),
-          0
-        )
-      `.as('revenueReal'),
+          COALESCE(
+            SUM(
+              CASE
+                WHEN ${appointmentsTables.status} = 'completed'
+                THEN ${appointmentsTables.appointmentPriceInCents}
+                ELSE 0
+              END
+            ),
+            0
+          )
+        `.as('revenueReal'),
       })
       .from(appointmentsTables)
       .where(
@@ -208,6 +224,7 @@ export const getDashboard = async ({ from, to, session }: Params) => {
       .groupBy(sql`DATE(${appointmentsTables.date})`)
       .orderBy(sql`DATE(${appointmentsTables.date})`),
   ]);
+
   return {
     totalRevenueProjected,
     totalRevenueReal,
