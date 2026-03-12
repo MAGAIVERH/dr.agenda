@@ -1,117 +1,3 @@
-// 'use server';
-
-// import dayjs from 'dayjs';
-// import timezone from 'dayjs/plugin/timezone';
-// import utc from 'dayjs/plugin/utc';
-// import { eq } from 'drizzle-orm';
-// import { headers } from 'next/headers';
-// import { z } from 'zod';
-
-// import { db } from '@/db';
-// import { appointmentsTables, doctorsTables } from '@/db/schema';
-
-// import { generateTimeSlots } from '@/helpers/time';
-// import { auth } from '@/lib/auth';
-// import { actionClient } from '@/lib/next-safe.action';
-
-// dayjs.extend(utc);
-// dayjs.extend(timezone);
-
-// export const getAvailableTimes = actionClient
-//   .schema(
-//     z.object({
-//       doctorId: z.string(),
-//       date: z.string().date(), // YYYY-MM-DD,
-//     }),
-//   )
-//   .action(async ({ parsedInput }) => {
-//     const session = await auth.api.getSession({
-//       headers: await headers(),
-//     });
-
-//     if (!session) {
-//       throw new Error('Unauthorized');
-//     }
-
-//     if (!session.user.clinic) {
-//       throw new Error('Clínica não encontrada');
-//     }
-
-//     const doctor = await db.query.doctorsTables.findFirst({
-//       where: eq(doctorsTables.id, parsedInput.doctorId),
-//     });
-
-//     if (!doctor) {
-//       throw new Error('Médico não encontrado');
-//     }
-
-//     const selectedDayOfWeek = dayjs(parsedInput.date).day(); // 0=Dom ... 6=Sáb
-//     const from = doctor.availableFromWeekDay;
-//     const to = doctor.availableToWeekDay;
-
-//     // ✅ Suporta faixa normal e faixa que "vira" a semana (ex: Seg(1) -> Dom(0))
-//     const doctorIsAvailable =
-//       from <= to
-//         ? selectedDayOfWeek >= from && selectedDayOfWeek <= to
-//         : selectedDayOfWeek >= from || selectedDayOfWeek <= to;
-
-//     if (!doctorIsAvailable) {
-//       return [];
-//     }
-
-//     const appointments = await db.query.appointmentsTables.findMany({
-//       where: eq(appointmentsTables.doctorId, parsedInput.doctorId),
-//     });
-
-//     // ✅ FIX: cancelado/ausente NÃO bloqueiam horário
-//     const blockingAppointmentsOnSelectedDate = appointments
-//       .filter((appointment) => {
-//         const isSameDay = dayjs(appointment.date).isSame(parsedInput.date, 'day');
-//         const status = appointment.status as string | undefined;
-
-//         const blocksSlot = status === 'scheduled' || status === 'completed';
-//         return isSameDay && blocksSlot;
-//       })
-//       .map((appointment) => dayjs(appointment.date).format('HH:mm:ss'));
-
-//     const timeSlots = generateTimeSlots();
-
-//     const doctorAvailableFrom = dayjs()
-//       .utc()
-//       .set('hour', Number(doctor.availableFromTime.split(':')[0]))
-//       .set('minute', Number(doctor.availableFromTime.split(':')[1]))
-//       .set('second', 0)
-//       .local();
-
-//     const doctorAvailableTo = dayjs()
-//       .utc()
-//       .set('hour', Number(doctor.availableToTime.split(':')[0]))
-//       .set('minute', Number(doctor.availableToTime.split(':')[1]))
-//       .set('second', 0)
-//       .local();
-
-//     const doctorTimeSlots = timeSlots.filter((time) => {
-//       const date = dayjs()
-//         .utc()
-//         .set('hour', Number(time.split(':')[0]))
-//         .set('minute', Number(time.split(':')[1]))
-//         .set('second', 0);
-
-//       return (
-//         date.format('HH:mm:ss') >= doctorAvailableFrom.format('HH:mm:ss') &&
-//         date.format('HH:mm:ss') <= doctorAvailableTo.format('HH:mm:ss')
-//       );
-//     });
-
-//     return doctorTimeSlots.map((time) => {
-//       return {
-//         value: time,
-//         available: !blockingAppointmentsOnSelectedDate.includes(time),
-//         label: time.substring(0, 5),
-//       };
-//     });
-//   });
-
 'use server';
 
 import dayjs from 'dayjs';
@@ -130,18 +16,24 @@ import { actionClient } from '@/lib/next-safe.action';
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
+// ✅ define o fuso explicitamente para não depender do timezone do servidor
+const CLINIC_TIMEZONE = 'America/Fortaleza';
+
 const normalizeTime = (time: string) => {
-  if (time.length === 5) {
-    return `${time}:00`;
+  const match = time.match(/\d{2}:\d{2}(:\d{2})?/);
+
+  if (!match) {
+    throw new Error(`Horário inválido: ${time}`);
   }
 
-  return time;
+  return match[0].length === 5 ? `${match[0]}:00` : match[0];
 };
 
-const convertUtcTimeToLocal = (time: string) => {
+// ✅ converte o horário salvo em UTC no banco para o horário local da clínica
+const convertUtcTimeToClinicTime = (time: string) => {
   return dayjs
     .utc(`2000-01-01T${normalizeTime(time)}`)
-    .local()
+    .tz(CLINIC_TIMEZONE)
     .format('HH:mm:ss');
 };
 
@@ -181,7 +73,9 @@ export const getAvailableTimes = actionClient
       throw new Error('Médico não encontrado');
     }
 
-    const selectedDayOfWeek = dayjs(parsedInput.date).day();
+    const selectedDateInClinicTz = dayjs.tz(parsedInput.date, CLINIC_TIMEZONE);
+    const selectedDayOfWeek = selectedDateInClinicTz.day();
+
     const fromWeekDay = doctor.availableFromWeekDay;
     const toWeekDay = doctor.availableToWeekDay;
 
@@ -200,39 +94,41 @@ export const getAvailableTimes = actionClient
 
     const blockingAppointmentsOnSelectedDate = appointments
       .filter((appointment) => {
-        const isSameDay = dayjs(appointment.date).isSame(parsedInput.date, 'day');
+        const appointmentDateInClinicTz = dayjs(appointment.date).tz(CLINIC_TIMEZONE);
+        const isSameDay =
+          appointmentDateInClinicTz.format('YYYY-MM-DD') ===
+          selectedDateInClinicTz.format('YYYY-MM-DD');
+
         const status = appointment.status as string | undefined;
         const blocksSlot = status === 'scheduled' || status === 'completed';
 
         return isSameDay && blocksSlot;
       })
-      .map((appointment) => dayjs(appointment.date).format('HH:mm:ss'));
+      .map((appointment) => dayjs(appointment.date).tz(CLINIC_TIMEZONE).format('HH:mm:ss'));
 
-    const doctorAvailableFromLocal = convertUtcTimeToLocal(doctor.availableFromTime);
-    const doctorAvailableToLocal = convertUtcTimeToLocal(doctor.availableToTime);
-
-    const now = dayjs();
-    const isToday = dayjs(parsedInput.date).isSame(now, 'day');
-    const currentTime = now.format('HH:mm:ss');
+    const doctorAvailableFromClinicTime = convertUtcTimeToClinicTime(doctor.availableFromTime);
+    const doctorAvailableToClinicTime = convertUtcTimeToClinicTime(doctor.availableToTime);
 
     const timeSlots = generateTimeSlots();
 
-    const availableSlots = timeSlots.filter((time) => {
-      const isInsideDoctorSchedule = isTimeWithinRange(
-        time,
-        doctorAvailableFromLocal,
-        doctorAvailableToLocal,
-      );
+    // ✅ mantém a grade inteira do médico
+    const doctorTimeSlots = timeSlots.filter((time) =>
+      isTimeWithinRange(time, doctorAvailableFromClinicTime, doctorAvailableToClinicTime),
+    );
 
+    const nowInClinicTz = dayjs().tz(CLINIC_TIMEZONE);
+    const isToday =
+      selectedDateInClinicTz.format('YYYY-MM-DD') === nowInClinicTz.format('YYYY-MM-DD');
+    const currentTime = nowInClinicTz.format('HH:mm:ss');
+
+    return doctorTimeSlots.map((time) => {
       const isBlocked = blockingAppointmentsOnSelectedDate.includes(time);
       const isPastTimeToday = isToday && time <= currentTime;
 
-      return isInsideDoctorSchedule && !isBlocked && !isPastTimeToday;
+      return {
+        value: time,
+        available: !isBlocked && !isPastTimeToday,
+        label: time.substring(0, 5),
+      };
     });
-
-    return availableSlots.map((time) => ({
-      value: time,
-      available: true,
-      label: time.substring(0, 5),
-    }));
   });

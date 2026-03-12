@@ -107,7 +107,7 @@ const AddAppointmentForm = ({
     }
 
     const appointmentDate = new Date(appointment.date);
-    const appointmentTime = dayjs(appointmentDate).format('HH:mm');
+    const appointmentTime = dayjs(appointmentDate).format('HH:mm:ss');
 
     return {
       patientId: appointment.patientId,
